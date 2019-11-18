@@ -77,4 +77,4 @@ for i in range(step):
     mobil = create_vehicle(prob_arrival, arrival_ratio, v_params)
     if(mobil):
         arr_mobil.append(mobil)
-    # 2. Update Posisi Mobil
+    # 2. Update Posisi Mobil Sesuai Rule
