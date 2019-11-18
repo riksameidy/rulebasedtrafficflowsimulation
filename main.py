@@ -15,6 +15,7 @@ def plot_jalan():
     plt.plot(jalan, np.zeros((jalan.size, 1)) + 9)
 
 
+
 L_jalan = 144 * 10**3  # meter
 lebar_lane = 4 # meter
 v_kecil = 100 # km/jam
@@ -29,6 +30,7 @@ step = int(3600//flow) +1 # second
 arr_mobil = []
 t = []
 N_mobil = 0
+
 jalan = np.arange(0,L_jalan,1)
 print(jalan.size)
 
