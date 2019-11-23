@@ -70,17 +70,26 @@ def create_vehicle(prob_arrival,ratio,v_params):
         return Vehicle( type,v, Posisi(0,1) )
 
 characteristic_distance = {
-    "affected": None,
-    "safety":None,
-    "feasible_passing":None,
-    "critical":None,
-    "extreme":None
+    "affected": 100,
+    "safety":80,
+    "feasible_passing":50,
+    "critical":30,
+    "extreme":10
 }
 
 
 def speed_rule_travelling_freely(mobil):
     v = np.random.uniform(-3,3)
     return  mobil.update_speed(v)
+
+def speed_rule_car_following_with_reference(mobil):
+    return
+
+def speed_rule_close_car_following(mobil):
+    return
+
+def speed_rule_normal_car_following(mobil):
+    return
 
 def split_mobil_per_lane(arr_mobil):
     left_lane = []
@@ -151,12 +160,14 @@ def generate_vparams_mobil(mobil,left_lane,right_lane):
         v1 = opp_lane[idx_opp_prev].v
 
     mobil.setVparams( Vparams(v0,v1,v2,v3) )
+    mobil.set_adj_dist( abs(lane[idx_adj_next].posisi.x - mobil.posisi.x) )
 
 
 
 
 # Main Simulation
-step = int(t_akhir/delta_t)
+# step = int(t_akhir/delta_t)
+step = 5
 arr_mobil = []
 for i in range(step):
     tm = (i+1 * delta_t)
@@ -165,11 +176,34 @@ for i in range(step):
     if(mobil):
         id_generator = id_generator + 1
         mobil.set_id(id_generator)
-        arr_mobil.append(mobil)
-    # 2. Update Posisi Mobil Sesuai Rule
+        arr_mobil.insert(0,mobil)
+    # 2. Update Vparams dan Distance Ahead
     (left_lane,right_lane) = split_mobil_per_lane(arr_mobil)
+    print('================================================')
     for m in arr_mobil:
         generate_vparams_mobil(m,left_lane,right_lane)
+        print('-------------------')
         m.printVehicle()
         m.vparams.printVparams()
+    # 3. Rule based Algorithm
+    for m in arr_mobil:
+        # Cek Lane Mobil
+        if(m.posisi.lane==1):
+            # Apply Rule Left Lane
+            if(m.adj_dist == 0):
+                speed_rule_travelling_freely(m)
+            else:
+                if(m.adj_dist > characteristic_distance['affected'] ):
+                    speed_rule_travelling_freely(m)
+                else:
+                    if(m.v1 <= m.v3):
+                        speed_rule_car_following_with_reference(m)
+                    else:
+                        #
+
+        else:
+            # Apply Rule Right Lane
+
+        m.posisi.x = m.posisi.x + (m.v * delta_t)
+
 
