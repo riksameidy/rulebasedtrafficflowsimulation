@@ -1,15 +1,25 @@
 from Vehicle import *
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Parameters ==========================================================================
 v_params = {
 "v_kecil_min" : 80,# km/jam
-"v_kecil_max":100, # km/jam
+"v_kecil_max": 100, # km/jam
 "v_sedang_min" : 60, # km/jam
 "v_sedang_max" : 80, # km/jam
 "v_besar_min" : 60, # km/jam
 "v_besar_max" : 80 # km/jam
+}
+
+v_params_right = {
+"v_kecil_min" : 100,# km/jam
+"v_kecil_max": 120, # km/jam
+"v_sedang_min" : 80, # km/jam
+"v_sedang_max" : 100, # km/jam
+"v_besar_min" : 80, # km/jam
+"v_besar_max" : 100 # km/jam
 }
 rata_rata_volume = 1050 # vehicle per hour
 mean_arrival = rata_rata_volume / 3600 # vehicle per second
@@ -35,6 +45,7 @@ def prob_arrival_car_type(s,m,l):
 
 def type_car_generate(ratio):
     r = np.random.uniform(0,1)
+    np.random.seed()
     (prob1,prob2) = prob_arrival_car_type(ratio["small"],ratio["medium"],ratio["large"])
     if(r>0 and r <prob1):
         return 1 # large car
@@ -70,26 +81,79 @@ def create_vehicle(prob_arrival,ratio,v_params):
         return Vehicle( type,v, Posisi(0,1) )
 
 characteristic_distance = {
-    "affected": 100,
-    "safety":80,
-    "feasible_passing":50,
-    "critical":30,
-    "extreme":10
+    "affected": 80,
+    "safety":100,
+    "feasible_passing":20,
+    "critical":20,
+    "extreme": 10
 }
 
+def check_speed_limit(mobil):
+    pengali = 1000/3600
+    if(mobil.posisi.lane==2):
+        v_param = v_params
+    else:
+        v_param = v_params_right
+    if(mobil.type==1):
+        if(mobil.v > v_param['v_besar_max']):
+            mobil.v = pengali * v_param['v_besar_max']
+
+        if(mobil.v < v_param['v_besar_min']):
+            mobil.v = pengali * v_param['v_besar_min']
+
+    elif(mobil.type==2):
+        if (mobil.v > v_param['v_sedang_max']):
+            mobil.v = pengali * v_param['v_sedang_max']
+
+        if (mobil.v < v_param['v_sedang_min']):
+            mobil.v = pengali * v_param['v_sedang_min']
+    elif(mobil.type==3):
+        if (mobil.v > v_param['v_kecil_max']):
+            mobil.v = pengali * v_param['v_kecil_max']
+
+        if (mobil.v < v_param['v_kecil_min']):
+            mobil.v = pengali * v_param['v_kecil_min']
 
 def speed_rule_travelling_freely(mobil):
-    v = np.random.uniform(-3,3)
-    return  mobil.update_speed(v)
+    v = np.random.uniform(0,20)
+    mobil.update_speed(v)
+    check_speed_limit(mobil)
 
-def speed_rule_car_following_with_reference(mobil):
-    return
+def speed_rule_car_following_with_reference(mobil,status):
+    if(status==1 and mobil.vparams.v3!=None):
+        deltav = mobil.vparams.v3 - mobil.v
+    elif(status==0 and mobil.vparams.v2!=None):
+        deltav = mobil.vparams.v2 - mobil.v
+    else:
+        deltav = 0
+    # print('deltav',deltav)
+    v = np.random.uniform(0,abs(deltav))
+    # print('v_tambahan',v)
+    mobil.update_speed_ms(v)
+    check_speed_limit(mobil)
 
-def speed_rule_close_car_following(mobil):
-    return
 
-def speed_rule_normal_car_following(mobil):
-    return
+def speed_rule_close_car_following(mobil,status):
+    if (status == 1 and mobil.vparams.v3!=None):
+        deltav = mobil.vparams.v3 - mobil.v
+    elif (status == 0 and mobil.vparams.v2 != None):
+        deltav = mobil.vparams.v2 - mobil.v
+    else:
+        deltav = 0
+    v = np.random.uniform( -abs(deltav),0 )
+    mobil.update_speed_ms(v)
+    check_speed_limit(mobil)
+
+def speed_rule_normal_car_following(mobil,status):
+    if (status == 1 and mobil.vparams.v3!=None):
+        deltav = mobil.vparams.v3 - mobil.v
+    elif (status == 0 and mobil.vparams.v2 != None):
+        deltav = mobil.vparams.v2 - mobil.v
+    else:
+        deltav = 0
+    v = np.random.uniform(-abs(deltav), abs(deltav))
+    mobil.update_speed_ms(v)
+    check_speed_limit(mobil)
 
 def split_mobil_per_lane(arr_mobil):
     left_lane = []
@@ -108,7 +172,7 @@ def generate_vparams_mobil(mobil,left_lane,right_lane):
         opp_lane = right_lane
     else:
         lane = right_lane
-        opp_lane = right_lane
+        opp_lane = left_lane
 
     idx_mobil = -1
     for i,m in enumerate(lane):
@@ -124,14 +188,14 @@ def generate_vparams_mobil(mobil,left_lane,right_lane):
     idx_adj_next = -1
     idx_opp_prev= -1
     idx_opp_next = -1
-    v0 = None
-    v1 = None
-    v2 = None
-    v3 = None
+    v0 = None  #prev adj
+    v1 = None  #prev opp
+    v2 = None  #next adj
+    v3 = None  #next opp
 
     for i,m in enumerate(opp_lane):
         if( m.posisi.x > mobil.posisi.x ):
-            if(i-1 > 0 ):
+            if(i-1 >= 0 ):
                 idx_prev = i-1
             else:
                 idx_prev =  -1
@@ -146,7 +210,7 @@ def generate_vparams_mobil(mobil,left_lane,right_lane):
         idx_adj_next = idx_mobil+1
         v2 = lane[idx_adj_next].v
 
-    if(idx_mobil-1 > 0):
+    if(idx_mobil-1 >= 0):
         idx_adj_prev = idx_mobil -1
         v0 = lane[idx_adj_prev].v
 
@@ -154,6 +218,7 @@ def generate_vparams_mobil(mobil,left_lane,right_lane):
     if(idx_next!=-1):
         idx_opp_next = idx_next
         v3 = opp_lane[idx_opp_next].v
+        mobil.set_opp_dist(abs(opp_lane[idx_opp_next].posisi.x - mobil.posisi.x))
 
     if(idx_prev!=-1):
         idx_opp_prev = idx_prev
@@ -161,30 +226,59 @@ def generate_vparams_mobil(mobil,left_lane,right_lane):
 
     mobil.setVparams( Vparams(v0,v1,v2,v3) )
     mobil.set_adj_dist( abs(lane[idx_adj_next].posisi.x - mobil.posisi.x) )
+    if(idx_opp_next != -1 and idx_opp_prev != -1):
+        mobil.set_opp_forward_backward( abs(opp_lane[idx_opp_next].posisi.x - opp_lane[idx_opp_prev].posisi.x ) )
+    mobil.set_idx_sekitar(idx_adj_next,idx_adj_prev,idx_opp_next,idx_opp_prev)
 
-
+def check_keluar_road(arr_mobil):
+    for m in arr_mobil:
+        if(m.isInRoad==False):
+            arr_mobil.remove(m)
 
 
 # Main Simulation
-# step = int(t_akhir/delta_t)
-step = 5
+step = int(t_akhir/delta_t)
+flows = []
+delays = []
 arr_mobil = []
+speed_1 = []
+speed_2 = []
+speed_3 = []
+delay_1 = []
+delay_2 = []
+delay_3 = []
+
 for i in range(step):
     tm = (i+1 * delta_t)
+    check_keluar_road(arr_mobil)
+    if(tm%60==0):
+        flows.append( (tm, len(arr_mobil)) )
     # 1. Cek Arrival Mobil Baru dari pintu masuk Tol
     mobil = create_vehicle(prob_arrival, arrival_ratio, v_params)
     if(mobil):
         id_generator = id_generator + 1
         mobil.set_id(id_generator)
         arr_mobil.insert(0,mobil)
+        if(mobil.type==1):
+            delay_1.append(tm)
+        elif(mobil.type==2):
+            delay_2.append(tm)
+        elif(mobil.type==3):
+            delay_3.append(tm)
     # 2. Update Vparams dan Distance Ahead
     (left_lane,right_lane) = split_mobil_per_lane(arr_mobil)
-    print('================================================')
+    # print('================================================')
     for m in arr_mobil:
         generate_vparams_mobil(m,left_lane,right_lane)
-        print('-------------------')
-        m.printVehicle()
-        m.vparams.printVparams()
+        # print('-------------------')
+        if(m.type==1):
+            speed_1.append(m.v)
+        elif(m.type==2):
+            speed_2.append(m.v)
+        else:
+            speed_3.append(m.v)
+        # m.printVehicle()
+        # m.vparams.printVparams()
     # 3. Rule based Algorithm
     for m in arr_mobil:
         # Cek Lane Mobil
@@ -196,14 +290,79 @@ for i in range(step):
                 if(m.adj_dist > characteristic_distance['affected'] ):
                     speed_rule_travelling_freely(m)
                 else:
-                    if(m.v1 <= m.v3):
-                        speed_rule_car_following_with_reference(m)
+                    if(m.vparams.v2 > m.v ):
+                        speed_rule_car_following_with_reference(m,0)
                     else:
-                        #
+                        # subjectively overtake?
+                        r = np.random.uniform(0,1)
+                        # syarat overtake
+                        if(r>0.2 and m.adj_dist < characteristic_distance['critical'] and m.opp_dist < characteristic_distance['critical'] and m.opp_dist_forward_backward < characteristic_distance['feasible_passing'] ):
+                            # not overtake
+                            if (m.adj_dist > characteristic_distance['critical']):
+                                speed_rule_normal_car_following(m,0)
+                            else:
+                                speed_rule_close_car_following(m,0)
+                        else:
+                            # overtake
+                            m.set_id_track(left_lane[m.idx_adj_next].id)
+                            m.posisi.lane = 2
+                            if(m.opp_dist!=-1 and m.opp_dist < characteristic_distance['affected']):
+                                speed_rule_normal_car_following(m,1)
+                            else:
+                                speed_rule_travelling_freely(m)
 
         else:
             # Apply Rule Right Lane
+            if(m.id_track == left_lane[m.idx_opp_next].id):
+                #not yet passed the opp front car
+                if(m.adj_dist > characteristic_distance['affected']):
+                    speed_rule_travelling_freely(m)
+                else:
+                    if(m.vparams.v2 != None and m.vparams.v2 > m.v):
+                        speed_rule_car_following_with_reference(m,0)
+                    else:
+                        if(m.adj_dist > characteristic_distance['critical']):
+                            speed_rule_normal_car_following(m,1)
+                        else:
+                            speed_rule_close_car_following(m,1)
+
+            else:
+                #has passed the opp front car
+                m.set_id_track(None)
+                if(m.opp_dist > characteristic_distance['affected']):
+                    m.posisi.lane=1
+                    speed_rule_travelling_freely(m)
+                else:
+                    if(m.vparams.v3!=None and m.vparams.v3 > m.v):
+                        speed_rule_car_following_with_reference(m,1)
+                    else:
+                        if(m.opp_dist > characteristic_distance['critical']):
+                            speed_rule_normal_car_following(m,1)
+                        else:
+                            speed_rule_close_car_following(m,1)
+
 
         m.posisi.x = m.posisi.x + (m.v * delta_t)
+        if(m.posisi.x > panjang_tol ):
+            m.set_keluar_road()
+
+t = [ f[0] for f in flows]
+flow = [ f[1] for f in flows]
+print('avg v mobil besar', sum(speed_1) /  len(speed_1) * 3600/1000)
+print('avg v mobil sedang', sum(speed_2) /  len(speed_2) * 3600/1000)
+print('avg v mobil kecil', sum(speed_3) /  len(speed_3) * 3600/1000)
+
+np_delay = np.diff(np.array(delay_1))
+plt.plot( np.arange(1,np_delay.size+1,1),np_delay , color='r')
+
+plt.figure()
+np_delay2 = np.diff(np.array(delay_2))
+plt.plot( np.arange(1,np_delay2.size+1,1),np_delay2, color='g' )
+
+plt.figure()
+np_delay3 = np.diff(np.array(delay_3))
+plt.plot( np.arange(1,np_delay3.size+1,1),np_delay3 , color='b')
 
 
+
+plt.show()
