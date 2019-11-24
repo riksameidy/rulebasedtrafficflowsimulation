@@ -1,0 +1,4 @@
+#!/bin/bash
+
+rm ./*.csv
+cp ./results/$1/*.csv ./
