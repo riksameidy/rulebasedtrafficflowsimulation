@@ -3,6 +3,7 @@ import math
 import numpy as np
 import time
 import csv
+from mpi4py import MPI
 
 # Parameters ==========================================================================
 v_params = {
@@ -252,27 +253,50 @@ elapsed = []
 t_simulasi = []
 start_time = time.time()
 
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
 for i in range(step):
-    tm = (i+1 * delta_t)
-    check_keluar_road(arr_mobil)
-    t_simulasi.append(tm)
-    if(tm%60==0):
-        flows.append( (tm, len(arr_mobil)) )
-    # 1. Cek Arrival Mobil Baru dari pintu masuk Tol
-    mobil = create_vehicle(prob_arrival, arrival_ratio, v_params)
-    if(mobil):
-        id_generator = id_generator + 1
-        mobil.set_id(id_generator)
-        arr_mobil.insert(0,mobil)
-        if(mobil.type==1):
-            delay_1.append(tm)
-        elif(mobil.type==2):
-            delay_2.append(tm)
-        elif(mobil.type==3):
-            delay_3.append(tm)
-    # 2. Update Vparams dan Distance Ahead
-    (left_lane,right_lane) = split_mobil_per_lane(arr_mobil)
-    # print('================================================')
+    if(rank==0):
+        tm = (i+1 * delta_t)
+        check_keluar_road(arr_mobil)
+        t_simulasi.append(tm)
+        if(tm%60==0):
+            flows.append( (tm, len(arr_mobil)) )
+        # 1. Cek Arrival Mobil Baru dari pintu masuk Tol
+        mobil = create_vehicle(prob_arrival, arrival_ratio, v_params)
+        if(mobil):
+            id_generator = id_generator + 1
+            mobil.set_id(id_generator)
+            arr_mobil.insert(0,mobil)
+            if(mobil.type==1):
+                delay_1.append(tm)
+            elif(mobil.type==2):
+                delay_2.append(tm)
+            elif(mobil.type==3):
+                delay_3.append(tm)
+        # 2. Update Vparams dan Distance Ahead
+        (left_lane,right_lane) = split_mobil_per_lane(arr_mobil)
+        # print('================================================')
+    else:
+        left_lane = None
+        right_lane = None
+        arr_mobil = None
+    left_lane = comm.bcast(left_lane,root=0)
+    right_lane = comm.bcast(right_lane,root=0)
+    arr_mobil = comm.bcast(arr_mobil,root=0)
+    
+    if(rank==0):
+        chunks = [ [] for _ in range(size) ]
+        for j,chunk in enumerate(arr_mobil):
+            chunks[j%size].append(chunk)
+    else:
+        arr_mobil = None
+        chunks = None
+        
+    arr_mobil = comm.scatter(chunks,root=0)
+    
     for m in arr_mobil:
         generate_vparams_mobil(m,left_lane,right_lane)
         # print('-------------------')
@@ -285,6 +309,7 @@ for i in range(step):
         # m.printVehicle()
         # m.vparams.printVparams()
     # 3. Rule based Algorithm
+    
     for m in arr_mobil:
         # Cek Lane Mobil
         if(m.posisi.lane==1):
@@ -350,7 +375,19 @@ for i in range(step):
         m.posisi.x = m.posisi.x + (m.v * delta_t)
         if(m.posisi.x > panjang_tol ):
             m.set_keluar_road()
-    elapsed.append(time.time())
+    
+    arr_mobil = comm.gather(arr_mobil,root=0)
+    if(rank==0):
+        temp = []
+        for m in arr_mobil:
+            for mobil in m:
+                temp.append(mobil)
+        arr_mobil = temp.copy()
+        elapsed.append(time.time())
+        
+    else:
+        arr_mobil = None
+    
 
 t = [ f[0] for f in flows]
 flow = [ f[1] for f in flows]
@@ -372,26 +409,26 @@ seq_cars_3 = np.arange(1,np_delay3.size+1,1)
 for i in range(len(elapsed)):
     elapsed[i]-= start_time
 
-with open('serial_avg_v.csv',mode='w') as csv_time:
+with open('parallel'+ str(size) +'_avg_v.csv',mode='w') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     csv_time_writer.writerow([ avg1,avg2,avg3 ])
 
-with open('serial_elapsed.csv',mode='w') as csv_time:
+with open('parallel'+ str(size) +'_elapsed.csv',mode='w') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(elapsed)):
         csv_time_writer.writerow([ t_simulasi[i], elapsed[i]])
 
-with open('serial_delay1.csv',mode='w') as csv_time:
+with open('parallel'+ str(size) +'_delay1.csv',mode='w') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(np_delay)):
         csv_time_writer.writerow( [ seq_cars_1[i], np_delay[i] ] )
 
-with open('serial_delay2.csv',mode='w') as csv_time:
+with open('parallel'+ str(size) +'_delay2.csv',mode='w') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(np_delay2)):
         csv_time_writer.writerow( [ seq_cars_2[i], np_delay2[i] ] )
 
-with open('serial_delay3.csv',mode='w') as csv_time:
+with open('parallel'+ str(size) +'_delay3.csv',mode='w') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(np_delay3)):
         csv_time_writer.writerow( [ seq_cars_3[i], np_delay3[i] ] )
