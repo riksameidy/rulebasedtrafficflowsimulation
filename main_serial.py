@@ -1,7 +1,8 @@
 from Vehicle import *
 import math
 import numpy as np
-import matplotlib.pyplot as plt
+import time
+import csv
 
 # Parameters ==========================================================================
 v_params = {
@@ -247,10 +248,14 @@ speed_3 = []
 delay_1 = []
 delay_2 = []
 delay_3 = []
+elapsed = []
+t_simulasi = []
+start_time = time.time()
 
 for i in range(step):
     tm = (i+1 * delta_t)
     check_keluar_road(arr_mobil)
+    t_simulasi.append(tm)
     if(tm%60==0):
         flows.append( (tm, len(arr_mobil)) )
     # 1. Cek Arrival Mobil Baru dari pintu masuk Tol
@@ -345,24 +350,48 @@ for i in range(step):
         m.posisi.x = m.posisi.x + (m.v * delta_t)
         if(m.posisi.x > panjang_tol ):
             m.set_keluar_road()
+    elapsed.append(time.time())
 
 t = [ f[0] for f in flows]
 flow = [ f[1] for f in flows]
-print('avg v mobil besar', sum(speed_1) /  len(speed_1) * 3600/1000)
-print('avg v mobil sedang', sum(speed_2) /  len(speed_2) * 3600/1000)
-print('avg v mobil kecil', sum(speed_3) /  len(speed_3) * 3600/1000)
+
+avg1 = sum(speed_1) /  len(speed_1) * 3600/1000
+avg2 = sum(speed_2) /  len(speed_2) * 3600/1000
+avg3 = sum(speed_3) /  len(speed_3) * 3600/1000
+
 
 np_delay = np.diff(np.array(delay_1))
-plt.plot( np.arange(1,np_delay.size+1,1),np_delay , color='r')
-
-plt.figure()
 np_delay2 = np.diff(np.array(delay_2))
-plt.plot( np.arange(1,np_delay2.size+1,1),np_delay2, color='g' )
-
-plt.figure()
 np_delay3 = np.diff(np.array(delay_3))
-plt.plot( np.arange(1,np_delay3.size+1,1),np_delay3 , color='b')
+
+seq_cars_1 = np.arange(1,np_delay.size+1,1)
+seq_cars_2 = np.arange(1,np_delay2.size+1,1)
+seq_cars_3 = np.arange(1,np_delay3.size+1,1)
 
 
+for i in range(len(elapsed)):
+    elapsed[i]-= start_time
 
-plt.show()
+with open('serial_avg_v.csv',mode='w') as csv_time:
+    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+    csv_time_writer.writerow([ avg1,avg2,avg3 ])
+
+with open('serial_elapsed.csv',mode='w') as csv_time:
+    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+    for i in range(len(elapsed)):
+        csv_time_writer.writerow([ t_simulasi[i], elapsed[i]])
+
+with open('serial_delay1.csv',mode='w') as csv_time:
+    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+    for i in range(len(np_delay)):
+        csv_time_writer.writerow( [ seq_cars_1[i], np_delay[i] ] )
+
+with open('serial_delay2.csv',mode='w') as csv_time:
+    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+    for i in range(len(np_delay2)):
+        csv_time_writer.writerow( [ seq_cars_2[i], np_delay2[i] ] )
+
+with open('serial_delay3.csv',mode='w') as csv_time:
+    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+    for i in range(len(np_delay3)):
+        csv_time_writer.writerow( [ seq_cars_3[i], np_delay3[i] ] )
