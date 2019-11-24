@@ -372,26 +372,31 @@ seq_cars_3 = np.arange(1,np_delay3.size+1,1)
 for i in range(len(elapsed)):
     elapsed[i]-= start_time
 
-with open('serial_avg_v.csv',mode='w') as csv_time:
+with open('serial_avg_v.csv',mode='w',newline='') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     csv_time_writer.writerow([ avg1,avg2,avg3 ])
 
-with open('serial_elapsed.csv',mode='w') as csv_time:
+with open('serial_elapsed.csv',mode='w',newline='') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(elapsed)):
         csv_time_writer.writerow([ t_simulasi[i], elapsed[i]])
 
-with open('serial_delay1.csv',mode='w') as csv_time:
+with open('serial_delay1.csv',mode='w',newline='') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(np_delay)):
         csv_time_writer.writerow( [ seq_cars_1[i], np_delay[i] ] )
 
-with open('serial_delay2.csv',mode='w') as csv_time:
+with open('serial_delay2.csv',mode='w',newline='') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(np_delay2)):
         csv_time_writer.writerow( [ seq_cars_2[i], np_delay2[i] ] )
 
-with open('serial_delay3.csv',mode='w') as csv_time:
+with open('serial_delay3.csv',mode='w',newline='') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(np_delay3)):
         csv_time_writer.writerow( [ seq_cars_3[i], np_delay3[i] ] )
+
+with open('serial_flows.csv',mode='w',newline='') as csv_time:
+    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+    for i in range(len(flow)):
+        csv_time_writer.writerow([ t[i],flow[i] ])
