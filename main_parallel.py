@@ -432,3 +432,8 @@ with open('parallel'+ str(size) +'_delay3.csv',mode='w') as csv_time:
     csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
     for i in range(len(np_delay3)):
         csv_time_writer.writerow( [ seq_cars_3[i], np_delay3[i] ] )
+
+with open('parallel'+ str(size) +'_flows.csv',mode='w',newline='') as csv_time:
+    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+    for i in range(len(flow)):
+        csv_time_writer.writerow([ t[i],flow[i] ])
