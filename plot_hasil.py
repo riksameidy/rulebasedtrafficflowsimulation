@@ -47,6 +47,7 @@ with open('serial_delay3.csv',mode='r') as csv_file:
         seq_car_3.append(float(row[0]))
         delay3.append(float(row[1]))
 
+print('v rata-rata: ',avg_v)
 
 # Plot Hasil Simulasi
 
