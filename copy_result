@@ -1,3 +1,4 @@
 #!/bin/bash
 
+mkdir -p results/$1
 cp *.csv ./results/$1
