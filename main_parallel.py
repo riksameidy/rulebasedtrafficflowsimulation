@@ -5,6 +5,10 @@ import time
 import csv
 from mpi4py import MPI
 
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
 # Parameters ==========================================================================
 v_params = {
 "v_kecil_min" : 80,# km/jam
@@ -253,10 +257,6 @@ elapsed = []
 t_simulasi = []
 start_time = time.time()
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
-
 for i in range(step):
     if(rank==0):
         tm = (i+1 * delta_t)
@@ -283,9 +283,9 @@ for i in range(step):
         left_lane = None
         right_lane = None
         arr_mobil = None
-    left_lane = comm.bcast(left_lane,root=0)
-    right_lane = comm.bcast(right_lane,root=0)
-    arr_mobil = comm.bcast(arr_mobil,root=0)
+    lanes_comb = comm.bcast([left_lane,right_lane],root=0)
+    left_lane = lanes_comb[0]
+    right_lane = lanes_comb[1]
     
     if(rank==0):
         chunks = [ [] for _ in range(size) ]
@@ -388,52 +388,52 @@ for i in range(step):
     else:
         arr_mobil = None
     
+if(rank==0):
+    t = [ f[0] for f in flows]
+    flow = [ f[1] for f in flows]
 
-t = [ f[0] for f in flows]
-flow = [ f[1] for f in flows]
-
-avg1 = sum(speed_1) /  len(speed_1) * 3600/1000
-avg2 = sum(speed_2) /  len(speed_2) * 3600/1000
-avg3 = sum(speed_3) /  len(speed_3) * 3600/1000
-
-
-np_delay = np.diff(np.array(delay_1))
-np_delay2 = np.diff(np.array(delay_2))
-np_delay3 = np.diff(np.array(delay_3))
-
-seq_cars_1 = np.arange(1,np_delay.size+1,1)
-seq_cars_2 = np.arange(1,np_delay2.size+1,1)
-seq_cars_3 = np.arange(1,np_delay3.size+1,1)
+    avg1 = sum(speed_1) /  len(speed_1) * 3600/1000
+    avg2 = sum(speed_2) /  len(speed_2) * 3600/1000
+    avg3 = sum(speed_3) /  len(speed_3) * 3600/1000
 
 
-for i in range(len(elapsed)):
-    elapsed[i]-= start_time
+    np_delay = np.diff(np.array(delay_1))
+    np_delay2 = np.diff(np.array(delay_2))
+    np_delay3 = np.diff(np.array(delay_3))
 
-with open('parallel'+ str(size) +'_avg_v.csv',mode='w') as csv_time:
-    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
-    csv_time_writer.writerow([ avg1,avg2,avg3 ])
+    seq_cars_1 = np.arange(1,np_delay.size+1,1)
+    seq_cars_2 = np.arange(1,np_delay2.size+1,1)
+    seq_cars_3 = np.arange(1,np_delay3.size+1,1)
 
-with open('parallel'+ str(size) +'_elapsed.csv',mode='w') as csv_time:
-    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+
     for i in range(len(elapsed)):
-        csv_time_writer.writerow([ t_simulasi[i], elapsed[i]])
+        elapsed[i]-= start_time
 
-with open('parallel'+ str(size) +'_delay1.csv',mode='w') as csv_time:
-    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
-    for i in range(len(np_delay)):
-        csv_time_writer.writerow( [ seq_cars_1[i], np_delay[i] ] )
+    with open('parallel'+ str(size) +'_avg_v.csv',mode='w') as csv_time:
+        csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+        csv_time_writer.writerow([ avg1,avg2,avg3 ])
 
-with open('parallel'+ str(size) +'_delay2.csv',mode='w') as csv_time:
-    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
-    for i in range(len(np_delay2)):
-        csv_time_writer.writerow( [ seq_cars_2[i], np_delay2[i] ] )
+    with open('parallel'+ str(size) +'_elapsed.csv',mode='w') as csv_time:
+        csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+        for i in range(len(elapsed)):
+            csv_time_writer.writerow([ t_simulasi[i], elapsed[i]])
 
-with open('parallel'+ str(size) +'_delay3.csv',mode='w') as csv_time:
-    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
-    for i in range(len(np_delay3)):
-        csv_time_writer.writerow( [ seq_cars_3[i], np_delay3[i] ] )
+    with open('parallel'+ str(size) +'_delay1.csv',mode='w') as csv_time:
+        csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+        for i in range(len(np_delay)):
+            csv_time_writer.writerow( [ seq_cars_1[i], np_delay[i] ] )
 
-with open('parallel'+ str(size) +'_flows.csv',mode='w',newline='') as csv_time:
-    csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
-    for i in range(len(flow)):
-        csv_time_writer.writerow([ t[i],flow[i] ])
+    with open('parallel'+ str(size) +'_delay2.csv',mode='w') as csv_time:
+        csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+        for i in range(len(np_delay2)):
+            csv_time_writer.writerow( [ seq_cars_2[i], np_delay2[i] ] )
+
+    with open('parallel'+ str(size) +'_delay3.csv',mode='w') as csv_time:
+        csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+        for i in range(len(np_delay3)):
+            csv_time_writer.writerow( [ seq_cars_3[i], np_delay3[i] ] )
+
+    with open('parallel'+ str(size) +'_flows.csv',mode='w',newline='') as csv_time:
+        csv_time_writer = csv.writer(csv_time,delimiter=',',quotechar='"')
+        for i in range(len(flow)):
+            csv_time_writer.writerow([ t[i],flow[i] ])
