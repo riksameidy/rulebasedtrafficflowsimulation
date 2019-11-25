@@ -16,41 +16,41 @@ seq_car_2 = []
 seq_car_3 = []
 tm = []
 flow = []
+name = 'parallel8'
 
 # load hasil simulasi
-with open('serial_elapsed.csv',mode='r') as csv_file:
+with open(name+'_elapsed.csv',mode='r') as csv_file:
     csv_reader = csv.reader(csv_file,delimiter=',')
     for row in csv_reader:
-        print(row)
         t_simulasi.append(float(row[0]) )
         elapsed.append(float(row[1]) )
 
-with open('serial_avg_v.csv',mode='r') as csv_file:
+with open(name+'_avg_v.csv',mode='r') as csv_file:
     csv_reader = csv.reader(csv_file,delimiter=',')
     for row in csv_reader:
         avg_v.append( float(row[0]) )
         avg_v.append( float(row[1]) )
         avg_v.append( float(row[2]) )
 
-with open('serial_delay1.csv',mode='r') as csv_file:
+with open(name+'_delay1.csv',mode='r') as csv_file:
     csv_reader = csv.reader(csv_file,delimiter=',')
     for row in csv_reader:
         seq_car_1.append(float(row[0]))
         delay1.append(float(row[1]))
 
-with open('serial_delay2.csv',mode='r') as csv_file:
+with open(name+'_delay2.csv',mode='r') as csv_file:
     csv_reader = csv.reader(csv_file,delimiter=',')
     for row in csv_reader:
         seq_car_2.append(float(row[0]))
         delay2.append(float(row[1]))
 
-with open('serial_delay3.csv',mode='r') as csv_file:
+with open(name+'_delay3.csv',mode='r') as csv_file:
     csv_reader = csv.reader(csv_file,delimiter=',')
     for row in csv_reader:
         seq_car_3.append(float(row[0]))
         delay3.append(float(row[1]))
 
-with open('serial_flows.csv',mode='r') as csv_file:
+with open(name+'_flows.csv',mode='r') as csv_file:
     csv_reader = csv.reader(csv_file,delimiter=',')
     for row in csv_reader:
         tm.append(float(row[0]))
@@ -66,8 +66,6 @@ plt.xlabel('t simulation')
 plt.ylabel('elapsed time (s) ')
 
 plt.figure()
-print(tm)
-print(flow)
 plt.plot( tm, flow , color='r')
 plt.title('Traffic Flow')
 plt.xlabel('t simulasi')
